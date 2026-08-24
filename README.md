@@ -12,11 +12,13 @@ This is a full-stack application that parses an uploaded PDF resume, sends the e
 |------------|----------------------------------------------|
 | Frontend   | Vite + React (TypeScript), Tailwind CSS, react-dropzone |
 | Backend    | FastAPI (Python)                            |
-| AI         | Google Gemini API (`gemini-2.5-flash`, JSON mode) |
+| AI         | Google Gemini API (`gemini-3.6-flash`, via `google-genai` SDK, JSON mode) |
 | Database   | Supabase (Postgres) via `supabase-py` client |
-| Parsing    | pdfminer.six                                |
+| Parsing    | pdfminer.six                                 |
 | Auth       | NextAuth.js or Clerk (Phase 5)              |
 | Deployment | Vercel (frontend) · Railway/Render (backend)|
+
+> **Note:** Direct Postgres connections (e.g. SQLAlchemy) aren't used in this project — the dev network doesn't support IPv6, which direct Postgres connections require. All database access goes through the `supabase-py` REST client instead.
 
 ## Project Structure
 
@@ -29,14 +31,13 @@ This is a full-stack application that parses an uploaded PDF resume, sends the e
 │   ├── .env
 │   └── package.json
 ├── backend/           # FastAPI app
-│   ├── main.py
-│   ├── routes/
-│   │   ├── upload.py
-│   │   └── analyze.py
-│   ├── services/
-│   │   ├── parser.py      # parse_resume()
-│   │   ├── feedback.py    # generate_feedback()
-│   │   └── supabase_client.py
+│   ├── app/
+│   │   ├── main.py            # FastAPI app, routes: /upload-resume, /analyze
+│   │   ├── db.py              # Supabase client
+│   │   └── utils/
+│   │       ├── parse_resume.py       # parse_resume()
+│   │       └── generate_feedback.py  # generate_feedback()
+│   ├── test_feedback.py       # standalone test for generate_feedback()
 │   ├── requirements.txt
 │   └── .env
 ├── .gitignore          # root-level, covers both frontend/ and backend/
@@ -77,7 +78,7 @@ cd Smart_Resume_Feedback_Tool
 cd backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install fastapi uvicorn python-multipart pdfminer.six google-generativeai supabase python-dotenv
+pip install fastapi uvicorn python-multipart pdfminer.six google-genai supabase python-dotenv
 ```
 
 Create `backend/.env`:
@@ -106,7 +107,7 @@ grant select, insert, update, delete on public.resumes to anon;
 Start the backend:
 
 ```bash
-uvicorn main:app --reload
+uvicorn app.main:app --reload
 ```
 
 Runs at `http://localhost:8000`. Interactive API docs at `http://localhost:8000/docs`.
@@ -139,39 +140,44 @@ Visit `http://localhost:5173`.
 | Method | Endpoint          | Description                              |
 |--------|-------------------|-------------------------------------------|
 | POST   | `/upload-resume`  | Accepts a PDF, extracts and stores text  |
-| POST   | `/analyze`        | Sends resume text to Gemini, returns feedback JSON |
+| POST   | `/analyze`        | Sends stored resume text to Gemini, stores and returns feedback JSON |
 
 Example response from `/analyze`:
 
 ```json
 {
-  "score": 78,
-  "formatting_issues": [
-    "Inconsistent bullet point styles",
-    "No clear section headers"
-  ],
-  "missing_keywords": ["Python", "REST APIs", "CI/CD"],
-  "ats_tips": [
-    "Avoid tables — ATS parsers may misread them",
-    "Remove headers/footers with contact info"
-  ]
+  "message": "Resume analyzed successfully",
+  "id": "830c7150-7c45-4d15-a141-273a4f541e69",
+  "feedback": {
+    "overall_score": 78,
+    "formatting": {
+      "score": 72,
+      "feedback": "Clear section headings, but formatting artifacts and inconsistent bullet punctuation reduce readability."
+    },
+    "keywords": {
+      "score": 84,
+      "feedback": "Strong technical keywords and action verbs; could add more modern tooling terms.",
+      "missing_suggestions": ["AWS", "CI/CD", "Unit Testing"]
+    },
+    "ats_optimization": {
+      "score": 76,
+      "feedback": "Plain-text layout is largely ATS-friendly, but non-standard separators could confuse parsers."
+    },
+    "summary": "A strong entry-level resume with solid technical foundations; cleaning up formatting artifacts and standardizing bullet structure would improve it most."
+  }
 }
 ```
-<!-- 
-## Roadmap
+
+<!-- ## Roadmap
 
 - [x] Phase 1 — Setup & architecture
-- [ ] Phase 2 — PDF parsing & database
-- [ ] Phase 3 — Gemini integration
+- [x] Phase 2 — PDF parsing & database
+- [x] Phase 3 — Gemini integration
 - [ ] Phase 4 — Upload UI & results page
-- [ ] Phase 5 — Auth, history, deployment
+- [ ] Phase 5 — Auth, history, deployment -->
 
-## Deployment
+<!-- ## Deployment
 
 - **Frontend:** [Vercel](https://vercel.com) or [Netlify](https://netlify.com)
 - **Backend:** [Railway](https://railway.app) or [Render](https://render.com)
-- Add `GEMINI_API_KEY`, `SUPABASE_URL`, and `SUPABASE_KEY` as environment variables on your deployment platform.
-
-## License
-
-MIT -->
+- Add `GEMINI_API_KEY`, `SUPABASE_URL`, and `SUPABASE_KEY` as environment variables on your deployment platform. -->
