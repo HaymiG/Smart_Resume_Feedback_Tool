@@ -4,6 +4,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from app.utils.parse_resume import parse_resume
 from app.db import supabase
 import uuid
+from app.utils.generate_feedback import generate_feedback
 
 app = FastAPI()
 
@@ -44,4 +45,47 @@ async def upload_resume(file: UploadFile = File(...)):
         "message": "Resume uploaded and parsed successfully",
         "id": new_row["id"],
         "text_preview": raw_text[:200]  # just first 200 chars so the response isn't huge
+    }
+    
+@app.post("/analyze")
+async def analyze_resume(resume_id: str):
+    # 1. Fetch the resume row from Supabase
+    result = supabase.table("resumes").select("*").eq("id", resume_id).execute()
+
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    resume_row = result.data[0]
+    raw_text = resume_row.get("raw_text")
+
+    # 2. Guard against empty resumes (e.g. scanned/image-only PDFs)
+    if not raw_text or not raw_text.strip():
+        raise HTTPException(
+            status_code=422,
+            detail="Resume text is empty — the PDF may be scanned or image-based"
+        )
+
+    # 3. Call Gemini for feedback
+    try:
+        feedback = generate_feedback(raw_text)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=f"AI feedback generation failed: {str(e)}")
+
+    # 4. Store feedback back in Supabase
+    update_result = (
+        supabase.table("resumes")
+        .update({"feedback": feedback})
+        .eq("id", resume_id)
+        .execute()
+    )
+
+    if not update_result.data:
+        raise HTTPException(status_code=500, detail="Failed to save feedback to database")
+
+    return {
+        "message": "Resume analyzed successfully",
+        "id": resume_id,
+        "feedback": feedback
     }
