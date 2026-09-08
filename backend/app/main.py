@@ -48,24 +48,28 @@ async def upload_resume(file: UploadFile = File(...)):
     }
     
 @app.post("/analyze")
-async def analyze_resume(resume_id: str):
-    # 1. Fetch the resume row from Supabase
-    result = supabase.table("resumes").select("*").eq("id", resume_id).execute()
+async def analyze_resume(file: UploadFile = File(...)):
+    # 1. Basic validation — only accept PDFs
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Only PDF files are accepted")
 
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Resume not found")
+    # 2. Read the raw bytes from the uploaded file
+    file_bytes = await file.read()
 
-    resume_row = result.data[0]
-    raw_text = resume_row.get("raw_text")
+    # 3. Extract text using your existing utility function
+    try:
+        raw_text = parse_resume(file_bytes)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse PDF: {str(e)}")
 
-    # 2. Guard against empty resumes (e.g. scanned/image-only PDFs)
+    # 4. Guard against empty resumes (e.g. scanned/image-only PDFs)
     if not raw_text or not raw_text.strip():
         raise HTTPException(
             status_code=422,
             detail="Resume text is empty — the PDF may be scanned or image-based"
         )
 
-    # 3. Call Gemini for feedback
+    # 5. Call Gemini for feedback
     try:
         feedback = generate_feedback(raw_text)
     except ValueError as e:
@@ -73,19 +77,22 @@ async def analyze_resume(resume_id: str):
     except RuntimeError as e:
         raise HTTPException(status_code=502, detail=f"AI feedback generation failed: {str(e)}")
 
-    # 4. Store feedback back in Supabase
-    update_result = (
-        supabase.table("resumes")
-        .update({"feedback": feedback})
-        .eq("id", resume_id)
-        .execute()
-    )
-
-    if not update_result.data:
-        raise HTTPException(status_code=500, detail="Failed to save feedback to database")
+    # 6. Store in Supabase for history
+    new_row = {
+        "id": str(uuid.uuid4()),
+        "user_id": "test-user",  # placeholder until we add real auth
+        "raw_text": raw_text,
+        "feedback": feedback,
+    }
+    
+    try:
+        supabase.table("resumes").insert(new_row).execute()
+    except Exception:
+        # Continue even if DB storage fails - still return feedback
+        pass
 
     return {
         "message": "Resume analyzed successfully",
-        "id": resume_id,
+        "id": new_row["id"],
         "feedback": feedback
     }
