@@ -1,3 +1,6 @@
+# IDE / editor
+.vscode/
+.kiro/
 .env
 backend/.env
 frontend/.env
