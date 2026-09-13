@@ -4,19 +4,18 @@ Upload a resume, get instant AI-powered feedback on formatting, keywords, and AT
 
 ## Overview
 
-This is a full-stack application that parses an uploaded PDF resume, sends the extracted text to an LLM for analysis, and returns structured, actionable feedback — a formatting review, missing keyword suggestions, ATS compatibility tips, and an overall score.
+This is a full-stack application that parses an uploaded PDF resume, sends the extracted text to Google Gemini for analysis, and returns structured, actionable feedback — a formatting review, missing keyword suggestions, ATS compatibility tips, and an overall score.
 
 ## Tech Stack
 
-| Layer      | Technology                                  |
-|------------|----------------------------------------------|
-| Frontend   | Vite + React (TypeScript), Tailwind CSS, react-dropzone |
-| Backend    | FastAPI (Python)                            |
+| Layer      | Technology                                      |
+|------------|--------------------------------------------------|
+| Frontend   | Vite + React (TypeScript), Tailwind CSS, react-dropzone, Axios |
+| Backend    | FastAPI (Python)                                |
 | AI         | Google Gemini API (`gemini-3.6-flash`, via `google-genai` SDK, JSON mode) |
-| Database   | Supabase (Postgres) via `supabase-py` client |
-| Parsing    | pdfminer.six                                 |
-| Auth       | NextAuth.js or Clerk (Phase 5)              |
-| Deployment | Vercel (frontend) · Railway/Render (backend)|
+| Database   | Supabase (Postgres) via `supabase-py` client    |
+| Parsing    | pdfminer.six                                     |
+| Auth       | Placeholder (`test-user`) — ready for NextAuth.js or Clerk integration |
 
 > **Note:** Direct Postgres connections (e.g. SQLAlchemy) aren't used in this project — the dev network doesn't support IPv6, which direct Postgres connections require. All database access goes through the `supabase-py` REST client instead.
 
@@ -26,35 +25,53 @@ This is a full-stack application that parses an uploaded PDF resume, sends the e
 .
 ├── frontend/          # Vite + React app (TypeScript)
 │   ├── src/
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   ├── .env
+│   │   ├── App.tsx                    # Main app with state machine (idle → analyzing → success/error)
+│   │   ├── main.tsx                   # Entry point
+│   │   ├── types.ts                   # TypeScript types for API responses
+│   │   ├── utils/
+│   │   │   ├── api.ts                 # API client (analyzeResume)
+│   │   │   └── validation.ts          # File validation utilities
+│   │   ├── components/
+│   │   │   ├── Dropzone.tsx           # Drag-and-drop file upload with validation
+│   │   │   ├── FileChip.tsx           # Selected file display with remove action
+│   │   │   ├── AnalyzeButton.tsx      # Primary action button with loading state
+│   │   │   ├── ErrorBanner.tsx        # Error display with dismiss
+│   │   │   ├── LoadingState.tsx       # Animated loading spinner
+│   │   │   ├── FeedbackDisplay.tsx    # Results container with ScoreCard + FeedbackSection
+│   │   │   ├── FeedbackSection.tsx    # Expandable feedback sections (Formatting, Keywords, ATS)
+│   │   │   ├── ScoreCard.tsx          # Visual score display with progress ring
+│   │   │   └── ResetButton.tsx        # Reset to upload state
+│   │   └── styles/
+│   │       └── design-tokens.ts       # Design tokens (colors, spacing, typography)
+│   ├── .env                           # VITE_API_URL
 │   └── package.json
 ├── backend/           # FastAPI app
 │   ├── app/
-│   │   ├── main.py            # FastAPI app, routes: /upload-resume, /analyze
-│   │   ├── db.py              # Supabase client
+│   │   ├── main.py                    # FastAPI app, routes: /upload-resume, /analyze
+│   │   ├── db.py                      # Supabase client initialization
 │   │   └── utils/
-│   │       ├── parse_resume.py       # parse_resume()
-│   │       └── generate_feedback.py  # generate_feedback()
-│   ├── test_feedback.py       # standalone test for generate_feedback()
+│   │       ├── parse_resume.py        # parse_resume() — PDF text extraction via pdfminer.six
+│   │       └── generate_feedback.py   # generate_feedback() — Gemini API call with structured prompt
+│   ├── test_feedback.py               # Standalone test for generate_feedback()
 │   ├── requirements.txt
 │   └── .env
-├── .gitignore          # root-level, covers both frontend/ and backend/
+├── .gitignore          # Root-level, covers both frontend/ and backend/
 └── README.md
 ```
 
 ## Features
 
-- **Drag-and-drop resume upload** — PDF only, max 5MB, with client-side validation
+- **Drag-and-drop resume upload** — PDF only, max 5MB, with client-side validation (file type + size)
 - **Automatic text extraction** from PDF via `pdfminer.six`
 - **AI-generated feedback**, returned as structured JSON:
-  - Formatting issues (sections, bullet points, structure)
-  - Missing keywords (technical skills, action verbs)
-  - ATS optimization tips (tables, headers/footers, clean structure)
-  - Overall score out of 100
-- **Persistent history** — past analyses stored per user and viewable later
-- **Simple auth** — email/password via NextAuth.js or Clerk
+  - **Formatting** — sections, bullet points, structure consistency (score + feedback)
+  - **Keywords** — technical skills, action verbs, missing suggestions (score + feedback + array)
+  - **ATS Optimization** — tables, headers/footers, clean structure (score + feedback)
+  - **Overall Score** — weighted score out of 100 with summary
+- **Persistent history** — past analyses stored per user in Supabase (currently `test-user` placeholder)
+- **Theme support** — Light/dark mode with system preference detection and localStorage persistence
+- **Responsive design** — Mobile-first, works on all screen sizes
+- **Accessible UI** — Semantic HTML, ARIA labels, focus management, reduced motion support
 
 ## Prerequisites
 
@@ -78,7 +95,7 @@ cd Smart_Resume_Feedback_Tool
 cd backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install fastapi uvicorn python-multipart pdfminer.six google-genai supabase python-dotenv
+pip install -r requirements.txt
 ```
 
 Create `backend/.env`:
@@ -116,9 +133,7 @@ Runs at `http://localhost:8000`. Interactive API docs at `http://localhost:8000/
 
 ```bash
 cd frontend
-npm create vite@latest . -- --template react-ts
 npm install
-npm install axios react-dropzone
 ```
 
 Create `frontend/.env`:
@@ -140,9 +155,9 @@ Visit `http://localhost:5173`.
 | Method | Endpoint          | Description                              |
 |--------|-------------------|-------------------------------------------|
 | POST   | `/upload-resume`  | Accepts a PDF, extracts and stores text  |
-| POST   | `/analyze`        | Sends stored resume text to Gemini, stores and returns feedback JSON |
+| POST   | `/analyze`        | Sends resume text to Gemini, stores and returns feedback JSON |
 
-Example response from `/analyze`:
+### Example Response from `/analyze`
 
 ```json
 {
@@ -168,16 +183,51 @@ Example response from `/analyze`:
 }
 ```
 
-<!-- ## Roadmap
+## Development
 
-- [x] Phase 1 — Setup & architecture
-- [x] Phase 2 — PDF parsing & database
-- [x] Phase 3 — Gemini integration
-- [ ] Phase 4 — Upload UI & results page
-- [ ] Phase 5 — Auth, history, deployment -->
+### Running Tests
+
+```bash
+# Backend
+cd backend
+python test_feedback.py
+
+# Frontend (when tests are added)
+cd frontend
+npm test
+```
+
+### Linting & Formatting
+
+```bash
+# Frontend
+cd frontend
+npm run lint
+```
 
 <!-- ## Deployment
 
 - **Frontend:** [Vercel](https://vercel.com) or [Netlify](https://netlify.com)
+  - Build command: `npm run build`
+  - Output directory: `dist`
+  - Environment variable: `VITE_API_URL=https://your-backend-url`
 - **Backend:** [Railway](https://railway.app) or [Render](https://render.com)
-- Add `GEMINI_API_KEY`, `SUPABASE_URL`, and `SUPABASE_KEY` as environment variables on your deployment platform. -->
+  - Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+  - Environment variables: `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`
+
+Add all environment variables on your deployment platform. -->
+
+## Roadmap
+
+- [x] Phase 1 — Setup & architecture
+- [x] Phase 2 — PDF parsing & database
+- [x] Phase 3 — Gemini integration
+- [x] Phase 4 — Upload UI & results page
+- [ ] Phase 5 — Auth, history, deployment
+  - [ ] User authentication (NextAuth.js or Clerk)
+  - [ ] Personal analysis history page
+  - [ ] Production deployment with CI/CD
+
+## License
+
+MIT
