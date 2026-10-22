@@ -1,4 +1,4 @@
-import { colors, typography } from '../styles/design-tokens';
+import { typography } from '../styles/design-tokens';
 
 interface AnalyzeButtonProps {
   onClick: () => void;
@@ -11,37 +11,41 @@ export default function AnalyzeButton({ onClick, disabled, isLoading }: AnalyzeB
     <button
       onClick={onClick}
       disabled={disabled || isLoading}
-      className="w-full mt-4 px-6 py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="btn-primary w-full inline-flex items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]"
       style={{
-        backgroundColor: disabled ? 'rgba(10, 10, 10, 0.1)' : colors.emerald,
-        color: disabled ? colors. muted : '#ffffff',
         fontSize: typography.size.base,
-        boxShadow: disabled ? 'none' : colors.shadow,
+        fontFamily: typography.body,
+        letterSpacing: typography.tracking.wide,
       }}
-      onMouseEnter={(e) => {
-        if (!disabled && !isLoading) {
-          e.currentTarget.style.backgroundColor = '#0d6860';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!disabled && !isLoading) {
-          e.currentTarget.style.backgroundColor = colors.emerald;
-        }
-      }}
+      aria-busy={isLoading}
     >
       {isLoading ? (
         <span className="flex items-center justify-center gap-2">
-          <div 
-            className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
-            style={{
-              borderColor: '#ffffff',
-              borderTopColor: 'transparent',
-            }}
-          />
-          Analyzing...
+          <svg
+            className="h-5 w-5 animate-spin text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+          Analyzing resume
         </span>
       ) : (
-        'Analyze Resume'
+        'Analyze resume'
       )}
     </button>
   );

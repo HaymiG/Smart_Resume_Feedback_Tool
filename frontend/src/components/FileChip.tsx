@@ -1,4 +1,4 @@
-import { colors, typography } from '../styles/design-tokens';
+import { typography } from '../styles/design-tokens';
 
 interface FileChipProps {
   file: File;
@@ -13,46 +13,32 @@ function formatFileSize(bytes: number): string {
 
 export default function FileChip({ file, onRemove }: FileChipProps) {
   return (
-    <div 
-      className="flex items-center justify-between gap-3 px-4 py-3 mt-4 rounded-lg transition-colors duration-150"
-      style={{
-        backgroundColor: 'rgba(10, 10, 10, 0.04)',
-        border: `1px solid ${colors.border}`,
-      }}
-    >
-      {/* File info */}
-      <div className="flex-1 min-w-0">
-        <p 
-          className="truncate"
-          style={{
-            fontSize: typography.size.sm,
-            color: colors.text,
-            fontWeight: 500,
-          }}
-        >
-          {file.name}
-        </p>
-        <p 
-          style={{
-            fontSize: typography.size.xs,
-            color: colors.muted,
-          }}
-        >
-          {formatFileSize(file.size)}
-        </p>
+    <div className="surface-card interactive animate-fade-up stagger-1 flex items-center justify-between gap-3 rounded-xl px-4 py-4 focus-within:ring-2 focus-within:ring-[var(--color-primary)] focus-within:ring-offset-2 focus-within:ring-offset-[var(--bg-surface)]">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-subtle)] text-lg" aria-hidden="true">
+          📎
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p
+            className="truncate text-sm font-semibold text-[var(--text-primary)]"
+            style={{ fontFamily: typography.body }}
+          >
+            {file.name}
+          </p>
+          <p className="mt-1 text-xs text-[var(--text-tertiary)]" style={{ fontFamily: typography.body }}>
+            {formatFileSize(file.size)}
+          </p>
+        </div>
       </div>
 
-      {/* Remove button */}
       <button
         onClick={onRemove}
-        className="flex items-center justify-center w-6 h-6 rounded-full transition-colors duration-150 hover:bg-[rgba(10,10,10,0.08)]"
-        style={{
-          color: colors.muted,
-          fontSize: typography.size.lg,
-        }}
-        aria-label="Remove file"
+        className="btn-ghost flex h-9 w-9 items-center justify-center rounded-full text-lg transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2"
+        aria-label={`Remove ${file.name}`}
+        style={{ fontSize: '1.25rem', lineHeight: 1 }}
       >
-        ×
+        <span aria-hidden="true">×</span>
       </button>
     </div>
   );

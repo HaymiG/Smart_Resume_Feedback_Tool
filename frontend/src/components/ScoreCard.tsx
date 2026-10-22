@@ -1,13 +1,14 @@
-import { colors, typography } from '../styles/design-tokens';
+import { typography } from '../styles/design-tokens';
+import { useEffect, useRef, useState } from 'react';
 
 interface ScoreCardProps {
   score: number;
 }
 
 function getScoreColor(score: number): string {
-  if (score < 50) return colors.red;
-  if (score < 75) return colors.amber;
-  return colors.emerald;
+  if (score < 50) return 'var(--color-error)';
+  if (score < 75) return 'var(--color-warning)';
+  return 'var(--color-success)';
 }
 
 function getVerdict(score: number): string {
@@ -20,34 +21,65 @@ function getVerdict(score: number): string {
 export default function ScoreCard({ score }: ScoreCardProps) {
   const scoreColor = getScoreColor(score);
   const verdict = getVerdict(score);
-  
+  const [animatedScore, setAnimatedScore] = useState(0);
+  const [animatedProgress, setAnimatedProgress] = useState(0);
+  const circleRef = useRef<SVGCircleElement>(null);
+
   // SVG circle configuration
   const size = 120;
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const progress = (score / 100) * circumference;
-  const dashOffset = circumference - progress;
+  const targetProgress = (score / 100) * circumference;
+
+  // Animate score number and circle on mount
+  useEffect(() => {
+    let scoreFrame: number;
+    const startTime = Date.now();
+    const duration = 1000; // 1 second
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Easing function (cubic-bezier(0.2, 0.8, 0.2, 1) equivalent)
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      setAnimatedScore(Math.round(score * eased));
+      setAnimatedProgress(circumference - targetProgress * eased);
+
+      if (progress < 1) {
+        scoreFrame = requestAnimationFrame(animate);
+      }
+    };
+
+    animate();
+    return () => {
+      if (scoreFrame) cancelAnimationFrame(scoreFrame);
+    };
+  }, [score, circumference, targetProgress]);
 
   return (
-    <div 
-      className="flex flex-col items-center p-8 bg-[#FAFAF8] rounded-xl"
-      style={{ boxShadow: colors.shadow }}
+    <div
+      className="surface-card interactive animate-scale-in stagger-2 flex flex-col items-center rounded-2xl p-7 text-center sm:p-8"
     >
-      {/* Circular Progress Ring */}
+      <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 py-1 text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+        Overall score
+      </div>
+
       <div className="relative" style={{ width: size, height: size }}>
-        {/* Background circle */}
         <svg className="transform -rotate-90" width={size} height={size}>
           <circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke="rgba(10, 10, 10, 0.08)"
+            stroke="var(--border-subtle)"
             strokeWidth={strokeWidth}
             fill="none"
+            strokeOpacity="0.3"
           />
-          {/* Progress circle */}
           <circle
+            ref={circleRef}
             cx={size / 2}
             cy={size / 2}
             r={radius}
@@ -55,46 +87,40 @@ export default function ScoreCard({ score }: ScoreCardProps) {
             strokeWidth={strokeWidth}
             fill="none"
             strokeDasharray={circumference}
-            strokeDashoffset={dashOffset}
+            strokeDashoffset={circumference - animatedProgress}
             strokeLinecap="round"
-            style={{ 
-              transition: 'stroke-dashoffset 0.5s ease',
+            style={{
+              filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1))',
             }}
           />
         </svg>
-        
-        {/* Score number centered in ring */}
-        <div 
+
+        <div
           className="absolute inset-0 flex items-center justify-center"
           style={{
             fontSize: typography.size['4xl'],
             fontWeight: 600,
-            color: colors.text,
+            color: 'var(--text-primary)',
             letterSpacing: typography.tracking.tighter,
+            lineHeight: typography.lineHeight.tight,
+            fontFamily: typography.heading,
           }}
         >
-          {score}
+          {animatedScore}
         </div>
       </div>
 
-      {/* Verdict text */}
-      <p 
-        className="mt-4 text-center"
+      <div
+        className="mt-5 inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold"
         style={{
-          fontSize: typography.size.base,
-          color: colors.muted,
+          backgroundColor: `${scoreColor}18`,
+          color: scoreColor,
         }}
       >
         {verdict}
-      </p>
-      
-      <p 
-        className="mt-1 text-center"
-        style={{
-          fontSize: typography.size.sm,
-          color: colors.muted,
-        }}
-      >
+      </div>
+
+      <p className="mt-3 text-center text-sm text-[var(--text-tertiary)]" style={{ fontFamily: typography.body }}>
         out of 100
       </p>
     </div>

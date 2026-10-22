@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import type { FileRejection } from 'react-dropzone';
-import { colors, typography } from '../styles/design-tokens';
+import { typography } from '../styles/design-tokens';
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -35,7 +35,7 @@ export default function Dropzone({ onFileSelect, onError }: DropzoneProps) {
     [onFileSelect, onError]
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, isFocused, open } = useDropzone({
     onDrop,
     accept: { 'application/pdf': ['.pdf'] },
     maxSize: MAX_SIZE,
@@ -45,50 +45,70 @@ export default function Dropzone({ onFileSelect, onError }: DropzoneProps) {
   return (
     <div
       {...getRootProps()}
-      className="flex flex-col items-center justify-center p-12 rounded-xl cursor-pointer transition-all duration-200"
+      aria-label="Upload resume PDF"
+      role="button"
+      tabIndex={0}
+      className="surface-card interactive relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-7 text-center transition-all duration-200 sm:p-10"
       style={{
-        border: isDragActive 
-          ? `2px solid ${colors.emerald}` 
-          : `2px dashed ${colors.border}`,
-        backgroundColor: isDragActive ? 'rgba(15, 118, 110, 0.05)' : colors.background,
+        borderColor: isDragActive ? 'var(--color-primary)' : isFocused ? 'var(--border-focus)' : 'var(--border-subtle)',
+        background: isDragActive
+          ? 'var(--color-primary-subtle)'
+          : isFocused
+          ? 'linear-gradient(180deg, var(--bg-surface), var(--color-primary-subtle))'
+          : 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-subtle))',
+        boxShadow: isDragActive || isFocused ? 'var(--shadow-lg)' : 'var(--shadow-md)',
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          open();
+        }
       }}
     >
       <input {...getInputProps()} />
-      
-      {/* Upload icon */}
-      <div 
-        className="mb-4"
-        style={{
-          fontSize: '48px',
-        }}
-      >
-        📄
+
+      <div className="mb-5 flex items-center justify-center">
+        <div className={`flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-primary-subtle)] text-3xl shadow-sm transition-transform duration-300 ${
+          isDragActive ? 'scale-110 rotate-3' : ''
+        }`}>
+          📄
+        </div>
       </div>
 
-      {/* Main text */}
-      <p 
-        style={{
-          fontSize: typography.size.base,
-          color: colors.text,
-          textAlign: 'center',
-          marginBottom: '8px',
-        }}
-      >
-        {isDragActive
-          ? 'Drop the PDF here...'
-          : 'Drag & drop your resume, or click to browse'}
-      </p>
+      <div className="max-w-lg">
+        <p
+          className="text-lg font-semibold text-[var(--text-primary)] sm:text-xl"
+          style={{
+            fontFamily: typography.heading,
+            letterSpacing: typography.tracking.tight,
+            lineHeight: typography.lineHeight.snug,
+          }}
+        >
+          {isDragActive ? 'Drop the PDF here' : 'Drag and drop your resume, or click to browse'}
+        </p>
 
-      {/* Subtext */}
-      <p 
-        style={{
-          fontSize: typography.size.sm,
-          color: colors.muted,
-          textAlign: 'center',
-        }}
-      >
-        PDF only, max 5MB
-      </p>
+        <p
+          className="mx-auto mt-3 max-w-md text-sm leading-6 text-[var(--text-secondary)] sm:text-base"
+          style={{ fontFamily: typography.body, lineHeight: typography.lineHeight.relaxed }}
+        >
+          We keep the flow simple: upload a PDF, review the score, and expand the sections that need attention.
+        </p>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+        {['PDF only', 'Max 5MB', 'Click or drag'].map((label) => (
+          <span
+            key={label}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1 text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)] shadow-sm"
+          >
+            {label}
+          </span>
+        ))}
+      </div>
+
+      {isFocused && !isDragActive && (
+        <div className="absolute inset-0 rounded-2xl ring-2 ring-[var(--color-primary)] ring-offset-2 ring-offset-[var(--bg-surface)] pointer-events-none" aria-hidden="true" />
+      )}
     </div>
   );
 }

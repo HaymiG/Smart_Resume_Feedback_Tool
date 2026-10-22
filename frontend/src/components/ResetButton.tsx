@@ -1,4 +1,4 @@
-import { colors, typography } from '../styles/design-tokens';
+import { typography } from '../styles/design-tokens';
 
 interface ResetButtonProps {
   onClick: () => void;
@@ -8,23 +8,15 @@ export default function ResetButton({ onClick }: ResetButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full px-6 py-3 rounded-lg font-medium transition-all duration-150"
+      className="btn-secondary group w-full inline-flex items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]"
       style={{
-        backgroundColor: 'transparent',
-        border: `1px solid ${colors.border}`,
-        color: colors.text,
         fontSize: typography.size.base,
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = 'rgba(10, 10, 10, 0.04)';
-        e.currentTarget.style.borderColor = colors.borderHover;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = 'transparent';
-        e.currentTarget.style.borderColor = colors.border;
+        fontFamily: typography.body,
+        letterSpacing: typography.tracking.wide,
       }}
     >
-      Analyze another resume
+      <span>Analyze another resume</span>
+      <span className="transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden="true">↺</span>
     </button>
   );
 }
