@@ -70,8 +70,8 @@ Most online resume scanners are frustrating black boxes. They output sterile sco
 - **Conversational 1-on-1 Feedback**: The AI reviews your resume from the perspective of an executive tech recruiter with 12+ years of hiring experience.
 - **"Listen to Coach" Speech Audio**: Uses the browser SpeechSynthesis API so you can listen to the AI coach read your personal career feedback aloud.
 - **6-Second Recruiter Glance**: Simulates eye-tracking first impressions to show what recruiters notice in the critical first 6 seconds.
-- ** Priority Action Plan (Quick Wins)**: 3 high-impact adjustments you can make in under 15 minutes, with an interactive completion checklist.
-- ** Recognized Strengths**: Highlights what you already did well to celebrate your engineering achievements.
+- **Priority Action Plan (Quick Wins)**: 3 high-impact adjustments you can make in under 15 minutes, with an interactive completion checklist.
+- **Recognized Strengths**: Highlights what you already did well to celebrate your engineering achievements.
 
 ### 2. Interactive STAR Bullet Rewriter Studio
 Transform passive task descriptions into recruiter-attracting, metric-driven achievements:
